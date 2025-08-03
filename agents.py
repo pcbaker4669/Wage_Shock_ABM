@@ -24,34 +24,22 @@ class Firm:
     def layoff_or_automate(self):
         max_affordable = int(self.budget // self.wage)
         excess = len(self.workers) - max_affordable
+
         if excess > 0:
+            print(f"Firm at ({self.x},{self.y}) laid off a worker or automated. Budget: {self.budget:.2f}")
             for _ in range(excess):
                 if random.random() < self.automation_prob:
                     self.automated_roles += 1
-                    self.capacity -= 1  # permanently reduce capacity
+                    self.capacity -= 1
                 else:
                     if self.workers:
-                        self.workers.pop()  # lay off last worker
-        # Optionally shrink capacity here further if needed
+                        worker = self.workers.pop()
+                        print(f"Firm at ({self.x},{self.y}) is laying off worker {worker.id}.")
+                        worker.layoff()  # Inform worker they’ve been laid off
 
     def pay_workers(self):
         total_pay = self.wage * len(self.workers)
         self.budget -= total_pay
-
-
-class Worker:
-    def __init__(self, id, firm):
-        self.id = id
-        self.current_firm = firm
-
-    def consider_move(self, neighbors):
-        # Move to a neighboring firm if it offers a higher wage and has capacity
-        better_firms = [f for f in neighbors if f.wage > self.current_firm.wage and len(f.workers) < f.capacity]
-        if better_firms:
-            best = max(better_firms, key=lambda f: f.wage)
-            self.current_firm.workers.remove(self)
-            best.hire_worker(self)
-            self.current_firm = best
 
 
 class Worker:
@@ -62,8 +50,17 @@ class Worker:
         self.failed_moves = 0
         self.max_failed_attempts = 3  # After this, may exit labor force
         self.exited_labor_force = False
+        self.search_cooldown = 0  # rounds to wait before looking again after layoff
+        self.job_search_success_prob = 0.5  # 50% chance per opportunity
 
     def consider_move(self, neighbors):
+        if self.exited_labor_force:
+            return
+
+        if self.search_cooldown > 0:
+            self.search_cooldown -= 1
+            return
+
         if self.exited_labor_force:
             return
 
@@ -73,7 +70,7 @@ class Worker:
             and len(f.workers) < f.capacity
         ]
 
-        if better_firms:
+        if better_firms and random.random() < self.job_search_success_prob:
             best = max(better_firms, key=lambda f: f.wage)
             if self.current_firm:
                 self.current_firm.workers.remove(self)
@@ -87,10 +84,10 @@ class Worker:
                 self.exit_labor_force()
 
     def layoff(self):
-        if self.current_firm:
-            self.current_firm.workers.remove(self)
         self.current_firm = None
         self.unemployed = True
+        self.search_cooldown = 1  # wait one step before job search
+        print(f"DEBUG: Worker {self.id} marked as unemployed.")
 
     def exit_labor_force(self):
         self.exited_labor_force = True
