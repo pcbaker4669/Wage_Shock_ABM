@@ -58,6 +58,14 @@ def run_simulation():
     assign_workers_to_firms(grid, workers)
     apply_wage_shock(grid, SHOCK_ZONE, WAGE_HIKE)
 
+    # Metrics tracking
+    metrics = {
+        'unemployed': [],
+        'exited': [],
+        'automated_jobs': [],
+        'total_employment': []
+    }
+
     for step in range(STEPS):
         print(f"Step {step+1}")
         # Firm actions
@@ -74,13 +82,23 @@ def run_simulation():
                 neighbors = get_neighbors(grid, reference_firm)
                 worker.consider_move(neighbors)
 
-        for w in workers.values():
-            if w.unemployed:
-                print(f"DEBUG: Worker {w.id} is unemployed")
-        # Metrics (to expand)
+        # Collect metrics
         exited = sum(w.exited_labor_force for w in workers.values())
         unemployed = sum(w.unemployed for w in workers.values())
-        print(f"  Unemployed: {unemployed}, Exited: {exited}")
+        automated = sum(f.automated_roles for row in grid for f in row)
+        employed = sum(len(f.workers) for row in grid for f in row)
+        metrics['unemployed'].append(unemployed)
+        metrics['exited'].append(exited)
+        metrics['automated_jobs'].append(automated)
+        metrics['total_employment'].append(employed)
 
+        print(f"  Unemployed: {unemployed}, Exited: {exited}, Automated Roles: {automated}, Employed: {employed}")
+
+    return metrics
+
+# https://chatgpt.com/c/68927f9c-27cc-832f-b19f-3574f72c230b?model=o4-mini-high
 if __name__ == "__main__":
-    run_simulation()
+    metrics = run_simulation()
+    print("\nSimulation complete. Metrics:")
+    for key, values in metrics.items():
+        print(f"{key}: {values}")
