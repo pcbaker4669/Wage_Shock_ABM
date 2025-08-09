@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from agents import Firm, Worker
+import csv
 
 # Simulation parameters
 GRID_SIZE = 10
@@ -83,7 +84,9 @@ def run_simulation():
         for worker in workers.values():
             if worker.unemployed and not worker.exited_labor_force:
                 # Use a random firm if worker has no current firm
-                reference_firm = worker.current_firm or random.choice(random.choice(grid))
+                i = random.randrange(grid.shape[0])
+                j = random.randrange(grid.shape[1])
+                reference_firm = worker.current_firm or grid[i, j]
                 neighbors = get_neighbors(grid, reference_firm)
                 worker.consider_move(neighbors)
 
@@ -97,13 +100,37 @@ def run_simulation():
         metrics['automated_jobs'].append(automated)
         metrics['total_employment'].append(employed)
 
+        # --- per-region metrics ---
+        shock_emp = sum(len(f.workers) for row in grid for f in row if f.is_shock_zone)
+        nonshock_emp = sum(len(f.workers) for row in grid for f in row if not f.is_shock_zone)
+        stress_shock = sum((f.wage * len(f.workers)) > f.revenue_per_step
+                           for row in grid for f in row if f.is_shock_zone)
+        stress_non = sum((f.wage * len(f.workers)) > f.revenue_per_step
+                         for row in grid for f in row if not f.is_shock_zone)
+
+        metrics.setdefault('shock_employment', []).append(shock_emp)
+        metrics.setdefault('nonshock_employment', []).append(nonshock_emp)
+        metrics.setdefault('shock_firms_stressed', []).append(stress_shock)
+        metrics.setdefault('nonshock_firms_stressed', []).append(stress_non)
+
         print(f"  Unemployed: {unemployed}, Exited: {exited}, Automated Roles: {automated}, Employed: {employed}")
 
     return metrics
 
 # https://chatgpt.com/c/68927f9c-27cc-832f-b19f-3574f72c230b?model=o4-mini-high
 if __name__ == "__main__":
+    random.seed(42)
+    np.random.seed(42)
     metrics = run_simulation()
     print("\nSimulation complete. Metrics:")
     for key, values in metrics.items():
         print(f"{key}: {values}")
+
+    # Save metrics to CSV
+    keys = list(metrics.keys())
+    with open('metrics.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['step'] + keys)
+        for t in range(STEPS):
+            writer.writerow([t + 1] + [metrics[k][t] for k in keys])
+    print("Saved metrics.csv")
