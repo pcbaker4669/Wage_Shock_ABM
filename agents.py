@@ -1,7 +1,9 @@
 import random
+import math
 
 class Firm:
-    def __init__(self, x, y, wage=15.0, budget=1000.0, capacity=10, is_shock_zone=False, automation_prob=0.0):
+    def __init__(self, x, y, wage=15.0, budget=1000.0, capacity=10, is_shock_zone=False,
+                 automation_prob=0.0, revenue_per_step=30.0):
         self.x = x
         self.y = y
         self.wage = wage
@@ -11,6 +13,7 @@ class Firm:
         self.is_shock_zone = is_shock_zone
         self.automation_prob = automation_prob  # chance to automate instead of lay off
         self.automated_roles = 0  # number of jobs replaced by automation
+        self.revenue_per_step = revenue_per_step  # NEW
 
     def update_wage(self, new_wage):
         self.wage = new_wage
@@ -22,20 +25,23 @@ class Firm:
         return False
 
     def layoff_or_automate(self):
-        max_affordable = int(self.budget // self.wage)
-        excess = len(self.workers) - max_affordable
+        # NEW: decide affordability based on per-step revenue, not stockpile
+        payroll = self.wage * len(self.workers)
+        if payroll <= self.revenue_per_step:
+            return
 
-        if excess > 0:
-            print(f"Firm at ({self.x},{self.y}) laid off a worker or automated. Budget: {self.budget:.2f}")
-            for _ in range(excess):
-                if random.random() < self.automation_prob:
-                    self.automated_roles += 1
-                    self.capacity -= 1
-                else:
-                    if self.workers:
-                        worker = self.workers.pop()
-                        print(f"Firm at ({self.x},{self.y}) is laying off worker {worker.id}.")
-                        worker.layoff()  # Inform worker they’ve been laid off
+        # number of roles to cut to get payroll <= revenue
+        needed_reduction = math.ceil((payroll - self.revenue_per_step) / max(self.wage, 1e-9))
+
+        for _ in range(min(needed_reduction, len(self.workers))):
+            if random.random() < self.automation_prob and self.capacity > 0:
+                # Automation replaces a role: reduce capacity and remove one worker
+                self.automated_roles += 1
+                self.capacity -= 1
+            # In both cases we free one worker spot to reduce payroll
+            if self.workers:
+                worker = self.workers.pop()
+                worker.layoff()
 
     def pay_workers(self):
         total_pay = self.wage * len(self.workers)

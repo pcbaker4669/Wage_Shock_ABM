@@ -1,6 +1,7 @@
 # WageHikeGridModel
 
 To simulate the diverse effects of localized minimum wage hikes on employment dynamics using a 2D grid of firms and mobile workers.
+## https://chatgpt.com/c/68927f9c-27cc-832f-b19f-3574f72c230b
 
 ## 🧠 Purpose
 

@@ -10,13 +10,18 @@ SHOCK_ZONE = (slice(0, 5), slice(0, 5))  # top-left 5x5
 STEPS = 20
 
 # Initialize grid of firms
-def create_firm_grid(size, shock_zone, default_wage=15.0, automation_prob=0.2):
+def create_firm_grid(size, shock_zone, default_wage=15.0, automation_prob=0.3):
     grid = np.empty((size, size), dtype=object)
     for i in range(size):
         for j in range(size):
             is_shock = (i in range(*shock_zone[0].indices(size)) and
                         j in range(*shock_zone[1].indices(size)))
-            firm = Firm(i, j, wage=default_wage, is_shock_zone=is_shock, automation_prob=automation_prob)
+            revenue = 30.0 if is_shock else 50.0  # NEW: lower revenue where wage shock hits
+            firm = Firm(i, j,
+                        wage=default_wage,
+                        is_shock_zone=is_shock,
+                        automation_prob=automation_prob,
+                        revenue_per_step=revenue)      # NEW
             grid[i, j] = firm
     return grid
 
