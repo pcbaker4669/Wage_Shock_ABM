@@ -3,7 +3,7 @@ import math
 
 class Firm:
     def __init__(self, x, y, wage=15.0, budget=1000.0, capacity=10, is_shock_zone=False,
-                 automation_prob=0.0, revenue_per_step=30.0):
+                 automation_prob=0.0, revenue_per_step=30.0, sector='other'):
         self.x = x
         self.y = y
         self.wage = wage
@@ -13,7 +13,8 @@ class Firm:
         self.is_shock_zone = is_shock_zone
         self.automation_prob = automation_prob  # chance to automate instead of lay off
         self.automated_roles = 0  # number of jobs replaced by automation
-        self.revenue_per_step = revenue_per_step  # NEW
+        self.revenue_per_step = revenue_per_step  #
+        self.sector = sector
 
     def update_wage(self, new_wage):
         self.wage = new_wage
@@ -21,6 +22,7 @@ class Firm:
     def hire_worker(self, worker):
         if len(self.workers) < self.capacity:
             self.workers.append(worker)
+            worker.current_firm = self
             return True
         return False
 
@@ -44,6 +46,8 @@ class Firm:
                 worker.layoff()
 
     def pay_workers(self):
+        # Add revenue for the step, then pay wages
+        self.budget += self.revenue_per_step
         total_pay = self.wage * len(self.workers)
         self.budget -= total_pay
 
@@ -65,9 +69,6 @@ class Worker:
 
         if self.search_cooldown > 0:
             self.search_cooldown -= 1
-            return
-
-        if self.exited_labor_force:
             return
 
         better_firms = [
